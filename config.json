@@ -32,6 +32,15 @@
     "num_workers": 4
   },
   
+  "loss_config": {
+    "task_type": "general",
+    "language_loss_weight": 1.0,
+    "diversity_loss_weight": 0.1,
+    "contrastive_loss_weight": 0.05,
+    "consistency_loss_weight": 0.01,
+    "temperature": 0.07
+  },
+  
   "curriculum_training": {
     "enabled": false,
     "stages": [

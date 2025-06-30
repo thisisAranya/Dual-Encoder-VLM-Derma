@@ -5,6 +5,8 @@ A multimodal architecture that combines Qwen 2.5-VL and DINOv2 vision encoders w
 ## Architecture Overview
 
 ```
+
+## Performance Analysis
 Input Image
      │
      ├─────────────────────┬
@@ -323,7 +325,66 @@ The framework supports multiple dataset formats:
 - `val_data_path`: Path to validation data
 - `image_root`: Root directory for images
 
-## Performance Analysis
+## Loss Function
+
+The framework uses a comprehensive multi-component loss function designed for multimodal learning:
+
+### **1. Language Modeling Loss (Primary)**
+- **Purpose**: Standard cross-entropy loss for text generation
+- **Weight**: 1.0 (default)
+- **Description**: Ensures the model generates coherent and accurate text responses
+
+### **2. Fusion Diversity Loss** 
+- **Purpose**: Encourages balanced usage of both vision encoders
+- **Weight**: 0.1 (default)
+- **Description**: Uses entropy to prevent the model from over-relying on one encoder
+- **Formula**: `-mean(α * log(α) + (1-α) * log(1-α))` where α is the fusion weight
+
+### **3. Contrastive Loss (Optional)**
+- **Purpose**: Aligns vision and text representations in shared embedding space
+- **Weight**: 0.05 (default)
+- **Description**: InfoNCE loss that pulls together vision-text pairs and pushes apart negatives
+
+### **4. Consistency Loss (Optional)**
+- **Purpose**: Similar images should have similar fusion strategies
+- **Weight**: 0.01 (default)  
+- **Description**: Minimizes variance in fusion weights across similar images
+
+### **Configuration Example:**
+
+```json
+{
+  "loss_config": {
+    "task_type": "general",
+    "language_loss_weight": 1.0,
+    "diversity_loss_weight": 0.1,
+    "contrastive_loss_weight": 0.05,
+    "consistency_loss_weight": 0.01,
+    "temperature": 0.07
+  }
+}
+```
+
+### **Task-Specific Loss Functions:**
+
+The framework supports specialized loss functions for different tasks:
+
+- **`general`**: Standard multimodal training
+- **`vqa`**: Visual Question Answering with answer accuracy focus
+- **`captioning`**: Image captioning with descriptive quality emphasis  
+- **`medical_vqa`**: Medical VQA with clinical accuracy weighting
+- **`classification`**: Image classification tasks
+
+```python
+# Create task-specific loss
+from loss_functions import create_loss_function
+
+loss_fn = create_loss_function(
+    tokenizer=tokenizer,
+    task_type='medical_vqa',
+    loss_config={'diversity_loss_weight': 0.15}
+)
+```
 
 ### Fusion Weight Analysis
 ```python

@@ -19,6 +19,10 @@ numpy>=1.24.0
 wandb>=0.16.0
 tqdm>=4.66.0
 
+# Loss function dependencies
+torch-audio>=2.0.0  # For advanced loss functions
+torchmetrics>=0.11.0  # For evaluation metrics
+
 # Visualization
 matplotlib>=3.7.0
 seaborn>=0.12.0

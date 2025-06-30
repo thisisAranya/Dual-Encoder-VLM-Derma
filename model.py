@@ -211,10 +211,19 @@ class DualVisionEncoder(nn.Module):
         messages: List[Dict],
         max_new_tokens: int = 128,
         return_intermediates: bool = False,
+        compute_loss: bool = False,
+        target_ids: Optional[torch.Tensor] = None,
         **generation_kwargs
     ) -> Dict[str, Any]:
         """
         Full forward pass following the architecture diagram
+        
+        Args:
+            messages: Chat messages in Qwen format
+            max_new_tokens: Maximum tokens to generate
+            return_intermediates: Whether to return intermediate features
+            compute_loss: Whether to compute logits for loss calculation
+            target_ids: Target token IDs for training
         """
         # Step 1: Process inputs using Qwen's pipeline
         text = self.processor.apply_chat_template(
@@ -272,30 +281,67 @@ class DualVisionEncoder(nn.Module):
             alpha = None
             intermediates = {}
         
-        # Step 7: Generate using LLM (standard Qwen generation for now)
-        with torch.no_grad():
-            generated_ids = self.qwen_model.generate(
-                **qwen_inputs,
-                max_new_tokens=max_new_tokens,
+        # Step 7: Generate or compute logits
+        if compute_loss and target_ids is not None:
+            # Training mode: compute logits for loss calculation
+            # Get text embeddings from input
+            input_ids = qwen_inputs['input_ids']
+            text_embeds = self.language_model.embed_tokens(input_ids)
+            
+            # If we have vision features, integrate them
+            if has_images:
+                # Project vision features to LM space
+                vision_features_lm = self.vision_to_lm(fused_features)  # [batch_size, lm_hidden_size]
+                
+                # Expand vision features to match sequence length
+                seq_len = text_embeds.shape[1]
+                vision_expanded = vision_features_lm.unsqueeze(1).expand(-1, seq_len, -1)
+                
+                # Add vision features to text embeddings
+                combined_embeds = text_embeds + vision_expanded
+            else:
+                combined_embeds = text_embeds
+            
+            # Forward through language model
+            lm_outputs = self.language_model(
+                inputs_embeds=combined_embeds,
+                attention_mask=qwen_inputs.get('attention_mask'),
                 **generation_kwargs
             )
-        
-        # Process output
-        generated_ids_trimmed = [
-            out_ids[len(in_ids):] for in_ids, out_ids in zip(qwen_inputs.input_ids, generated_ids)
-        ]
-        
-        output_text = self.processor.batch_decode(
-            generated_ids_trimmed,
-            skip_special_tokens=True,
-            clean_up_tokenization_spaces=False
-        )
-        
-        result = {
-            'generated_ids': generated_ids,
-            'generated_text': output_text,
-            'has_images': has_images
-        }
+            
+            # Get logits
+            logits = self.lm_head(lm_outputs.last_hidden_state)
+            
+            result = {
+                'logits': logits,
+                'has_images': has_images
+            }
+            
+        else:
+            # Inference mode: standard generation
+            with torch.no_grad():
+                generated_ids = self.qwen_model.generate(
+                    **qwen_inputs,
+                    max_new_tokens=max_new_tokens,
+                    **generation_kwargs
+                )
+            
+            # Process output
+            generated_ids_trimmed = [
+                out_ids[len(in_ids):] for in_ids, out_ids in zip(qwen_inputs.input_ids, generated_ids)
+            ]
+            
+            output_text = self.processor.batch_decode(
+                generated_ids_trimmed,
+                skip_special_tokens=True,
+                clean_up_tokenization_spaces=False
+            )
+            
+            result = {
+                'generated_ids': generated_ids,
+                'generated_text': output_text,
+                'has_images': has_images
+            }
         
         if has_images:
             result.update({
