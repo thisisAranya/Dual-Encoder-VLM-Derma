@@ -1,0 +1,84 @@
+{
+  "project_name": "dual_vision_encoder",
+  "output_dir": "./outputs",
+  
+  "model_config": {
+    "qwen_model_name": "Qwen/Qwen2.5-VL-3B-Instruct",
+    "dinov2_model_name": "facebook/dinov2-base",
+    "common_dim": 1024,
+    "dropout": 0.1,
+    "use_flash_attention": true
+  },
+  
+  "freeze_config": {
+    "freeze_qwen_vision": false,
+    "freeze_dinov2": true,
+    "freeze_llm": false,
+    "freeze_fusion_layers": false,
+    "freeze_projections": false
+  },
+  
+  "training_config": {
+    "learning_rate": 1e-4,
+    "weight_decay": 0.01,
+    "min_lr": 1e-6,
+    "num_epochs": 10,
+    "batch_size": 4,
+    "max_new_tokens": 100,
+    "max_grad_norm": 1.0,
+    "diversity_loss_weight": 0.1,
+    "save_steps": 1,
+    "log_steps": 10,
+    "num_workers": 4
+  },
+  
+  "curriculum_training": {
+    "enabled": false,
+    "stages": [
+      {
+        "mode": "fusion_only",
+        "epochs": 3,
+        "description": "First train only fusion layers"
+      },
+      {
+        "mode": "encoders_only", 
+        "epochs": 4,
+        "description": "Then train encoders with fusion"
+      },
+      {
+        "mode": "full",
+        "epochs": 3,
+        "description": "Finally train everything"
+      }
+    ]
+  },
+  
+  "data_config": {
+    "train_data_path": "./data/train.json",
+    "val_data_path": "./data/val.json",
+    "image_root": "./data/images",
+    "max_samples": null
+  },
+  
+  "dataset_config": {
+    "type": "dual_vision",
+    "args": {
+      "data_path": "./data/train.json",
+      "split": "train",
+      "image_root": "./data/images"
+    }
+  },
+  
+  "logging_config": {
+    "use_wandb": true,
+    "log_level": "INFO"
+  },
+  
+  "inference_config": {
+    "device": "auto",
+    "max_new_tokens": 128,
+    "temperature": 0.7,
+    "top_p": 0.9,
+    "do_sample": true
+  }
+}

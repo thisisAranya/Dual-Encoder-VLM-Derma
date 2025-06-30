@@ -1,0 +1,39 @@
+# Core dependencies
+torch>=2.0.0
+torchvision>=0.15.0
+transformers>=4.37.0
+accelerate>=0.25.0
+
+# Qwen VL specific
+qwen-vl-utils
+
+# Vision models
+timm>=0.9.12
+
+# Data processing
+Pillow>=10.0.0
+opencv-python>=4.8.0
+numpy>=1.24.0
+
+# Training and logging
+wandb>=0.16.0
+tqdm>=4.66.0
+
+# Visualization
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# Utilities
+scipy>=1.11.0
+scikit-learn>=1.3.0
+pandas>=2.0.0
+
+# Optional: for faster inference
+flash-attn>=2.4.0  # Optional, for flash attention support
+
+# Development tools
+jupyter>=1.0.0
+ipywidgets>=8.0.0
+
+# Config and argument parsing
+argparse  # Built-in, but listed for clarity
